@@ -22,6 +22,9 @@ fn main() {
 mod bf {
     use std::collections::HashMap;
     use std::time::Instant;
+    use getch::Getch;
+    use std::io::Write;
+    use std::io::stdout;
 
     pub fn run(source: &str) {
         print!("Loading bf code...\n");
@@ -47,8 +50,15 @@ mod bf {
                     let value: i16 = get_cell(&cells, dp) as i16 + v;
                     set_cell(&mut cells, dp, value)
                 },
-                Token::Output => print!("{}", get_cell(&cells, dp) as char),
-                Token::Input => (), //set_cell(&mut cells, dp, std::io::stdin().bytes()[0]),
+                Token::Output => {
+                    print!("{}", get_cell(&cells, dp) as char);
+                    stdout().flush().expect("Unable to flush terminal");
+                },
+                Token::Input => {
+                    let getch = Getch::new();
+                    let byte = getch.getch().expect("Unable to get input from terminal.");
+                    set_cell(&mut cells, dp, byte as i16);
+                },
                 Token::LB => {
                     if get_cell(&cells, dp) == 0 {
                         let mut nesting: i32 = 1;
@@ -97,14 +107,14 @@ mod bf {
         }
     }
 
-    #[derive(PartialEq, Debug)]
+    #[derive(PartialEq)]
     enum Token {
         DPoint(i32), // Move data poiner
-        Cell(i16),  // Add value to a cell at DP
-        Output,     // output byte at DP
-        Input,      // input byte at DP
-        LB,         // left bracket
-        RB,         // right bracket
+        Cell(i16),   // Add value to a cell at DP
+        Output,      // output byte at DP
+        Input,       // input byte at DP
+        LB,          // left bracket
+        RB,          // right bracket
     }
 
     fn parse(source: &str) -> Vec<Token> {
