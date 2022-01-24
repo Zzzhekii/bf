@@ -59,27 +59,14 @@ mod bf {
                     let byte = getch.getch().expect("Unable to get input from terminal.");
                     set_cell(&mut cells, dp, byte as i16);
                 },
-                Token::LB => {
+                Token::LB(v) => {
                     if get_cell(&cells, dp) == 0 {
-                        let mut nesting: i32 = 1;
-                        i += 1;
-                        while nesting != 0 && i < tokens.len() {
-                            if tokens[i] == Token::LB { nesting += 1 }
-                            if tokens[i] == Token::RB { nesting -= 1 }
-                            i += 1
-                        }
-                        i -= 1;
+                        i = *v
                     }
                 },
-                Token::RB => {
+                Token::RB(v) => {
                     if get_cell(&cells, dp) != 0 {
-                        let mut nesting: i32 = -1;
-                        i -= 1;
-                        while nesting != 0 && i < tokens.len() {
-                            if tokens[i] == Token::LB { nesting += 1 }
-                            if tokens[i] == Token::RB { nesting -= 1 }
-                            i -= 1
-                        }
+                        i = *v
                     }
                 },
             }
@@ -113,12 +100,15 @@ mod bf {
         Cell(i16),   // Add value to a cell at DP
         Output,      // output byte at DP
         Input,       // input byte at DP
-        LB,          // left bracket
-        RB,          // right bracket
+        LB(usize),   // left bracket
+        RB(usize),   // right bracket
     }
 
     fn parse(source: &str) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
+
+        // Saves position of to-be-parsed left brackets in parsed code
+        let mut left_brackets: Vec<usize> = Vec::new();
 
         let mut i: usize = 0;
         while i < source.len() {
@@ -155,8 +145,19 @@ mod bf {
                 },
                 b'.' => tokens.push(Token::Output),
                 b',' => tokens.push(Token::Input),
-                b'[' => tokens.push(Token::LB),
-                b']' => tokens.push(Token::RB),
+                b'[' => {
+                    tokens.push(Token::LB(0));
+                    left_brackets.push(tokens.len() - 1);
+                },
+                b']' => {
+                    let lb = match left_brackets.pop() {
+                        Some(s) => s,
+                        None => panic!("Paser error: closing bracket not found."),
+                    };
+                    tokens.push(Token::RB(lb));
+                    tokens[lb] = Token::LB(tokens.len() - 1);
+                    // []   []  [  [  [ ]] ]
+                },
                 _ => (),
             }
             i += 1;
